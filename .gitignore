@@ -148,4 +148,4 @@ dist
 *params.ts
 *cdk.context.json
 *.aws-sam
-bin
+.idea

@@ -14,6 +14,6 @@ export const params: IStreamlitEcsFargateCognito = {
 	cognito: {
 		domainPrefix: "as-you-like",
 		callbackUrls: ["https://your.domain.com/oauth2/idpresponse"],
-		logoutUrls: ["https://your.domain.com"]
+		logoutUrls: ["https://your.domain.com/signout"]
 	},
 }

@@ -1,7 +1,7 @@
 # zenn-streamlit-cognito
 
-[![cdk-version](https://img.shields.io/badge/aws_cdk-1.117.0-green.svg)](https://formulae.brew.sh/formula/aws-cdk)
-[![NodeVersion](https://img.shields.io/badge/node-16.6.0-blue.svg)](https://nodejs.org/ja/)
+[![cdk-version](https://img.shields.io/badge/aws_cdk-2.27.0-green.svg)](https://formulae.brew.sh/formula/aws-cdk)
+[![NodeVersion](https://img.shields.io/badge/node-16.15.0-blue.svg)](https://nodejs.org/ja/)
 
 
 ![](./streamlit_cognito_infra.png)
@@ -9,6 +9,7 @@
 # zenn article
 
 - [cognitoを利用してstreamlitへのアクセス範囲を限定する](https://zenn.dev/gsy0911/articles/da47b660b7dd2b7d1ae7)
+  - see: [tag: CDKv1](https://github.com/gsy0911/zenn-streamlit-cognito/tree/CDKv1)
 
 # deploy step
 
