@@ -16,8 +16,7 @@
 1. create `infra/params.ts` from example
 
 ```shell
-$ cd infra
-$ cp paramsExample.ts params.ts
+$ cp infrastructure/lib/paramsExample.ts infrastructure/lib/params.ts
 ```
 
 2. prepare your domain in `Route53`
