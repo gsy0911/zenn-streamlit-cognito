@@ -3,7 +3,7 @@ import { Construct } from "constructs";
 
 import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 import { prefix } from "../params";
-import * as path from "path";
+const entry = "./lib/constructs/waf/lambda"
 
 /**
  * Wafを作成するStack
@@ -219,7 +219,7 @@ export class Waf extends Construct {
     /** 有害なIPリストを更新するLambda */
     const lambdaWafv2IpSetUpdate = new PythonFunction(this, "LambdaWafv2IpSetUpdate", {
       functionName: `${prefix}_wafv2_ip_set_update`,
-      entry: path.resolve("lib", "constructs", "waf", "lambda"),
+      entry,
       index: "update_popular_ip_list.py",
       handler: "handler",
       runtime: aws_lambda.Runtime.PYTHON_3_12,
@@ -241,7 +241,7 @@ export class Waf extends Construct {
     /** 脆弱性をつくアクセスをするIPをブロックするLambda */
     const lambdaWafv2IpSetUpdateForVulnerability = new PythonFunction(this, "LambdaWafv2IpSetUpdateForVulnerability", {
       functionName: `${prefix}_wafv2_ip_set_update_for_vulnerability`,
-      entry: path.resolve("lib", "constructs", "waf", "lambda"),
+      entry,
       index: "block_vulnerability_candidate_ip.py",
       handler: "handler",
       runtime: aws_lambda.Runtime.PYTHON_3_12,

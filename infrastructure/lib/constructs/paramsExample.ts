@@ -1,4 +1,4 @@
-import type { ICognito } from "./cognito";
+import type { ICognitoConstants } from "./cognito";
 import type { IEcsServiceConstants } from "./ecsService";
 import { Environment } from "aws-cdk-lib";
 
@@ -10,21 +10,18 @@ export const envApNortheast1: Environment = {
 // AWS上に展開している環境の識別子
 export type environment = "dev" | "stg" | "prod";
 // サービスの名前など
-export const prefix = "your-service";
+export const prefix = "your-streamlit";
 
 export interface IStreamlitEcsFargateCognito {
   environment: environment;
-  cognito: ICognito;
+  cognito: ICognitoConstants;
   ecsService: IEcsServiceConstants;
 }
 
 export const paramsStreamlitEcsFargateCognito: IStreamlitEcsFargateCognito = {
   environment: "dev",
   ecsService: {
-    ecsRoles: {
-      s3BucketName: "",
-      userPoolName: "ap-northeast-1_${string}",
-    },
+    s3BucketName: "",
     ecsService: {
       taskCpu: 1024,
       taskMemoryLimit: 2048,
@@ -37,8 +34,7 @@ export const paramsStreamlitEcsFargateCognito: IStreamlitEcsFargateCognito = {
     },
   },
   cognito: {
-    environment: "dev",
-    domainPrefix: "your-dev",
+    domainPrefix: "your-prefix",
     privateClient: {
       callbackUrls: ["https://streamlit.your.domain.com/oauth2/idpresponse"],
       logoutUrls: ["https://streamlit.your.domain.com/signout"],

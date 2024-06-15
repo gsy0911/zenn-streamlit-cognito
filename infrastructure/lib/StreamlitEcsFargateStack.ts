@@ -9,7 +9,10 @@ export class StreamlitEcsFargateCognitoStack extends Stack {
     const { environment } = params;
 
     // cognito
-    const { userPool, userPoolClient, userPoolDomain } = new Cognito(this, "Cognito", params.cognito);
+    const { userPool, userPoolClient, userPoolDomain } = new Cognito(this, "Cognito", {
+      environment,
+      ...params.cognito,
+    });
 
     // vpc + security group
     const { vpc } = new Vpc(this, "Vpc");

@@ -1,4 +1,4 @@
-import { Duration, RemovalPolicy, aws_cognito, aws_lambda, aws_iam } from "aws-cdk-lib";
+import { Duration, RemovalPolicy, aws_cognito } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { type environment, prefix } from "./params";
 
@@ -9,9 +9,11 @@ interface privateClient {
 
 export interface ICognito {
   environment: environment;
-  domainPrefix: `${string}-${environment}`;
+  domainPrefix: string;
   privateClient: privateClient;
 }
+
+export type ICognitoConstants = Omit<ICognito, "environment">;
 
 export class Cognito extends Construct {
   public readonly userPool: aws_cognito.IUserPool;

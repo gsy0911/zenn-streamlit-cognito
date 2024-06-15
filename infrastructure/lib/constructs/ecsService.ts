@@ -10,6 +10,7 @@ import {
   aws_route53_targets,
   aws_cognito,
   aws_wafv2,
+  Stack,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
@@ -18,19 +19,22 @@ import { environment, prefix } from "./params";
 export interface IEcsRoles {
   /** サービス名の後ろに付与する場合、`-`で終わるとエラーが起きるため */
   environment: environment;
-  ecsRoles: {
-    s3BucketName: string;
-    userPoolName: `ap-northeast-1_${string}`;
-  };
+  s3BucketName: string;
+  // Idは次の${string}の部分：`ap-northeast-1_${string}`
+  userPoolId: string;
 }
 
 export class EcsRoles extends Construct {
   public readonly taskRole: aws_iam.IRole;
   public readonly executionRole: aws_iam.IRole;
 
-  constructor(scope: Construct, id: string, props: IEcsRoles) {
+  constructor(scope: Construct, id: string, params: IEcsRoles) {
     super(scope, id);
-    const { environment } = props;
+    const { environment } = params;
+    const account = Stack.of(this).account;
+    const region = Stack.of(this).region;
+    const userPoolName = `${region}_${params.userPoolId}`;
+
     /** タスクを作成する際に必要な権限 */
     this.executionRole = new aws_iam.Role(this, "ExecutionRole", {
       roleName: `${prefix}-ecs-execution-${environment}`,
@@ -71,10 +75,7 @@ export class EcsRoles extends Construct {
           statements: [
             new aws_iam.PolicyStatement({
               effect: aws_iam.Effect.ALLOW,
-              resources: [
-                `arn:aws:s3:::${props.ecsRoles.s3BucketName}/*`,
-                `arn:aws:s3:::${props.ecsRoles.s3BucketName}`,
-              ],
+              resources: [`arn:aws:s3:::${params.s3BucketName}/*`, `arn:aws:s3:::${params.s3BucketName}`],
               actions: ["s3:*"],
             }),
           ],
@@ -83,7 +84,7 @@ export class EcsRoles extends Construct {
           statements: [
             new aws_iam.PolicyStatement({
               effect: aws_iam.Effect.ALLOW,
-              resources: [`arn:aws:cognito-idp:ap-northeast-1:377234633259:userpool/${props.ecsRoles.userPoolName}`],
+              resources: [`arn:aws:cognito-idp:ap-northeast-1:${account}:userpool/${userPoolName}`],
               actions: ["cognito-idp:*"],
             }),
           ],
@@ -93,7 +94,7 @@ export class EcsRoles extends Construct {
   }
 }
 
-export interface IEcsService extends IEcsRoles {
+export interface IEcsService extends Omit<IEcsRoles, "userPoolId"> {
   vpc: aws_ec2.IVpc;
   albSecurityGroup: aws_ec2.ISecurityGroup;
   ecsSecurityGroup: aws_ec2.ISecurityGroup;
@@ -136,9 +137,13 @@ export class EcsService extends Construct {
       streamPrefix: `${prefix}-${environment}`,
     });
 
-    const { taskRole, executionRole } = new EcsRoles(this, "EcsRoles", { environment, ecsRoles: params.ecsRoles });
+    const { taskRole, executionRole } = new EcsRoles(this, "EcsRoles", {
+      environment,
+      s3BucketName: params.s3BucketName,
+      userPoolId: params.cognito.userPool.userPoolId,
+    });
 
-    const taskDef = new aws_ecs.FargateTaskDefinition(this, "MyTaskDefinition", {
+    const taskDef = new aws_ecs.FargateTaskDefinition(this, "TaskDefinition", {
       memoryLimitMiB: params.ecsService.taskMemoryLimit,
       cpu: params.ecsService.taskCpu,
       taskRole,
@@ -164,7 +169,7 @@ export class EcsService extends Construct {
         type: aws_ecs.DeploymentControllerType.CODE_DEPLOY,
       },
       healthCheckGracePeriod: Duration.seconds(5),
-      assignPublicIp: true,
+      assignPublicIp: false,
       securityGroups: [ecsSecurityGroup],
       enableExecuteCommand: params.ecsService.allowEcsExec,
     });
@@ -179,7 +184,7 @@ export class EcsService extends Construct {
       securityGroup: albSecurityGroup,
     });
 
-    const albHostedZone = aws_route53.HostedZone.fromLookup(this, "alb-hosted-zone", {
+    const albHostedZone = aws_route53.HostedZone.fromLookup(this, "AlbHostedZone", {
       domainName: params.alb.route53DomainName,
     });
 
@@ -192,7 +197,7 @@ export class EcsService extends Construct {
       certificates: [certificate],
     });
 
-    const targetGroupBlue = listenerHttp1.addTargets("http-blue-target", {
+    const targetGroupBlue = listenerHttp1.addTargets("HttpBlueTarget", {
       targetGroupName: "http-blue-target",
       protocol: aws_elasticloadbalancingv2.ApplicationProtocol.HTTP,
       deregistrationDelay: Duration.seconds(30),
@@ -203,7 +208,7 @@ export class EcsService extends Construct {
         path: params.ecsService.healthcheckPath,
       },
     });
-    listenerHttp1.addAction("cognito-auth-elb-1", {
+    listenerHttp1.addAction("CognitoAuthAlb1", {
       action: new aws_elasticloadbalancingv2_actions.AuthenticateCognitoAction({
         userPool: params.cognito.userPool,
         userPoolClient: params.cognito.userPoolClient,
@@ -216,7 +221,7 @@ export class EcsService extends Construct {
       priority: 1,
     });
     // redirect to https
-    alb.addListener("listenerRedirect", {
+    alb.addListener("ListenerRedirect", {
       protocol: aws_elasticloadbalancingv2.ApplicationProtocol.HTTP,
       defaultAction: aws_elasticloadbalancingv2.ListenerAction.redirect({
         port: "443",
@@ -225,13 +230,13 @@ export class EcsService extends Construct {
     });
 
     // Route 53 for alb
-    new aws_route53.ARecord(this, "alb-a-record", {
+    new aws_route53.ARecord(this, "AlbARecord", {
       zone: albHostedZone,
       target: aws_route53.RecordTarget.fromAlias(new aws_route53_targets.LoadBalancerTarget(alb)),
     });
 
     /** ALBにWAFの付与。このWAFは`WafStack`にて作成されたもの。変更を加えた場合はここにも修正を加える */
-    new aws_wafv2.CfnWebACLAssociation(this, "webAclAssociation", {
+    new aws_wafv2.CfnWebACLAssociation(this, "WebAclAssociation", {
       resourceArn: alb.loadBalancerArn,
       webAclArn: params.webAcl.attrArn,
     });
